@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Display navigation directions</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.12.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.12.0/mapbox-gl.js"></script>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+</style>
+</head>
+<body>
+<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.js"></script>
+<link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.css" type="text/css">
+
+
+<style>
+#menu {
+background: #fff;
+position: absolute;
+z-index: 1;
+top: 10px;
+right: 10px;
+border-radius: 3px;
+width: 120px;
+border: 1px solid rgba(0, 0, 0, 0.4);
+font-family: 'Open Sans', sans-serif;
+}
+ 
+#menu a {
+font-size: 13px;
+color: #404040;
+display: block;
+margin: 0;
+padding: 0;
+padding: 10px;
+text-decoration: none;
+border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+text-align: center;
+}
+ 
+#menu a:last-child {
+border: none;
+}
+ 
+#menu a:hover {
+background-color: #f8f8f8;
+color: #404040;
+}
+ 
+#menu a.active {
+background-color: #3887be;
+color: #ffffff;
+}
+ 
+#menu a.active:hover {
+background: #3074a4;
+}
+</style>
+ 
+<nav id="menu"></nav>
+
+<div id="map"></div>
+
+<script>
+	mapboxgl.accessToken = 'pk.eyJ1IjoicG9pc29ubWFwcyIsImEiOiJjbGRycnRxcGowbjZ1M29wOWhzdWF3bGNzIn0.cktV7JL0ukEkILsfauPa6A';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [3.906723888,7.440972088],
+        zoom: 13
+    });
+
+    map.addControl(
+        new MapboxDirections({
+            accessToken: mapboxgl.accessToken
+        }),
+        'top-left'
+    );
+
+    // Add geolocate control to the map.
+    map.addControl(
+        new mapboxgl.GeolocateControl({
+            positionOptions: {
+                enableHighAccuracy: true
+            },
+            // When active the map will receive updates to the device's location as it changes.
+            trackUserLocation: true,
+            // Draw an arrow next to the location dot to indicate which direction the device is heading.
+            showUserHeading: true
+        })
+        );
+
+//add data
+map.on('load', () => {
+map.addSource('places', {
+// This GeoJSON contains features that include an "icon"
+// property. The value of the "icon" property corresponds
+// to an image in the Mapbox Streets style's sprite.
+'type': 'geojson',
+'data': {
+'type': 'FeatureCollection',
+'features': [
+{
+'type': 'Feature',
+'properties': {
+'description':
+'<strong>A random point.<strong> </p><a href="https://drive.google.com/file/d/1dB13rIiVQib-qSnAhzAizszGa_F6qYiM/view?usp=sharing" title="Opens in a new window">Image</a>.</p>',
+'icon': 'theatre'
+},
+'geometry': {
+'type': 'Point',
+'coordinates': [3.889589621389427, 7.443613495980056]
+}
+},
+
+{
+'type': 'Feature',
+'properties': {
+'description':
+'<strong>Random Point.</p>',
+'icon': 'theatre'
+},
+'geometry': {
+'type': 'Point',
+'coordinates': [3.889679871946805, 7.443432420199677]
+}
+}
+
+
+
+]
+}
+});
+// Add a layer showing the places.
+map.addLayer({
+'id': 'places',
+'type': 'symbol',
+'source': 'places',
+'layout': {
+'icon-image': ['get', 'icon'],
+'icon-allow-overlap': true
+}
+});
+ 
+// When a click event occurs on a feature in the places layer, open a popup at the
+// location of the feature, with description HTML from its properties.
+map.on('click', 'places', (e) => {
+// Copy coordinates array.
+const coordinates = e.features[0].geometry.coordinates.slice();
+const description = e.features[0].properties.description;
+ 
+// Ensure that if the map is zoomed out such that multiple
+// copies of the feature are visible, the popup appears
+// over the copy being pointed to.
+while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+}
+ 
+new mapboxgl.Popup()
+.setLngLat(coordinates)
+.setHTML(description)
+.addTo(map);
+});
+ 
+// Change the cursor to a pointer when the mouse is over the places layer.
+map.on('mouseenter', 'places', () => {
+map.getCanvas().style.cursor = 'pointer';
+});
+ 
+// Change it back to a pointer when it leaves.
+map.on('mouseleave', 'places', () => {
+map.getCanvas().style.cursor = '';
+});
+});
+
+
+
+
+
+ 
+// After the last frame rendered before the map enters an "idle" state.
+map.on('idle', () => {
+// If these two layers were not added to the map, abort
+if (!map.getLayer('places') ) {
+return;
+}
+ 
+// Enumerate ids of the layers.
+const toggleableLayerIds = ['places'];
+ 
+// Set up the corresponding toggle button for each layer.
+for (const id of toggleableLayerIds) {
+// Skip layers that already have a button set up.
+if (document.getElementById(id)) {
+continue;
+}
+ 
+// Create a link.
+const link = document.createElement('a');
+link.id = id;
+link.href = '#';
+link.textContent = id;
+link.className = 'active';
+ 
+// Show or hide layer when the toggle is clicked.
+link.onclick = function (e) {
+const clickedLayer = this.textContent;
+e.preventDefault();
+e.stopPropagation();
+ 
+const visibility = map.getLayoutProperty(
+clickedLayer,
+'visibility'
+);
+ 
+// Toggle layer visibility by changing the layout object's visibility property.
+if (visibility === 'visible') {
+map.setLayoutProperty(clickedLayer, 'visibility', 'none');
+this.className = '';
+} else {
+this.className = 'active';
+map.setLayoutProperty(
+clickedLayer,
+'visibility',
+'visible'
+);
+}
+};
+ 
+const layers = document.getElementById('menu');
+layers.appendChild(link);
+}
+});
+
+</script>
+
+</body>
+</html>
